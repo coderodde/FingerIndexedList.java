@@ -1,7 +1,6 @@
 package io.github.coderodde.util;
 
 import io.github.coderodde.util.FingerIndexedList.BasicIterator;
-import io.github.coderodde.util.FingerIndexedList.DescendingIterator;
 import io.github.coderodde.util.FingerIndexedList.EnhancedIterator;
 import io.github.coderodde.util.FingerIndexedList.EnhancedSubList;
 import io.github.coderodde.util.FingerIndexedList.Finger;

@@ -692,7 +692,7 @@ public class FingerIndexedList<E> implements List<E>,
             // Go get the proper node:
             if (elementIndex < nextAIndex) {
                 // Here, the desired element is between the head of the list and
-                // the very first fi    nger:
+                // the very first finger:
                 int leftDistance = elementIndex;
                 int rightDistance = nextAIndex - elementIndex;
 
@@ -704,7 +704,7 @@ public class FingerIndexedList<E> implements List<E>,
                                         rightDistance);
                 }
             } else {
-                return aNode;
+                return scrollToRight(aNode, elementIndex - nextAIndex);
             }
         }
 
@@ -1004,13 +1004,13 @@ public class FingerIndexedList<E> implements List<E>,
                                  size + 1);
 
                 fingerArray = newFingerArray;
+                
+                //  Increment the number of real fingers: 
+                ++size;
 
                 // Shift all the rest fingers' indices one step to the right towards
                 // higher indices:
                 shiftFingerIndicesToRightOnce(1);
-
-                // Update the index of the new end-of-finger-list sentinel:
-                ++getFinger(size() + 1).index;
             } else {
                 // Shift the all fingers' indices one step to the right:
                 shiftFingerIndicesToRightOnce(0);
@@ -1022,10 +1022,10 @@ public class FingerIndexedList<E> implements List<E>,
                                  1, 
                                  size + 1);
 
+                ++size;
             }
 
             fingerArray[0] = finger;
-            size++;
         }
 
         /**
@@ -1735,14 +1735,16 @@ public class FingerIndexedList<E> implements List<E>,
     public FingerIndexedList<E> deepCopy() {
         // First, copy the actual content:
         FingerIndexedList<E> other = new FingerIndexedList<>(this);
-        int fingerIndex = 0;
         
-        // Copy the finger list:
-        for (int i = 0; i <= this.fingerList.size; i++) {
-            // Copy the finger:
-            other.fingerList.fingerArray[fingerIndex++] = 
-                    new Finger<>(fingerList.fingerArray[i]);
+        for (int i = 0; i < this.fingerList.size; ++i) {
+            int index = this.fingerList.fingerArray[i].index;
+            
+            other.fingerList.fingerArray[i] = 
+                new Finger<>(other.getNodeSequentially(index), index);
         }
+        
+        other.fingerList.fingerArray[this.fingerList.size] =
+            new Finger<>(null, this.size);
         
         return other;
     }
@@ -2760,7 +2762,7 @@ public class FingerIndexedList<E> implements List<E>,
         modCount++;
         
         // Attempt to contract the finger array:
-        fingerList.contractFingerArrayIfNeeded(size);
+        fingerList.contractFingerArrayIfNeeded(fingerList.size());
     }
     
     /**
@@ -3363,121 +3365,6 @@ public class FingerIndexedList<E> implements List<E>,
          * while iterating.
          */
         void checkForComodification() {
-            if (modCount != expectedModCount) {
-                throw new ConcurrentModificationException();
-            }
-        }
-    }
-    
-    /**
-     * This inner class implements the descending list iterator over this list.
-     */
-    final class DescendingIterator implements Iterator<E> {
-
-        /**
-         * The most recently returned element.
-         */
-        private Node<E> lastReturned;
-        
-        /**
-         * The next node to iterate.
-         */
-        private Node<E> nextToIterate = tail;
-        
-        /**
-         * The index of the node next to iterate.
-         */
-        private int nextIndex = FingerIndexedList.this.size - 1;
-        
-        /**
-         * The cached expected modification count. Used to detect the situations
-         * where the list is modified outside iterator API during iteration.
-         */
-        int expectedModCount = FingerIndexedList.this.modCount;
-        
-        /**
-         * Returns {@code true} if and only if this iterator has more elements
-         * to offer.
-         * 
-         * @return {@code true} if and only if there is more to iterate. 
-         */
-        @Override
-        public boolean hasNext() {
-            return nextIndex > -1;
-        }
-        
-        /**
-         * Returns the next element in the iteration order.
-         * 
-         * @return the next element.
-         * @throws ConcurrentModificationException if the underlying list was
-         *                                         modified outside the iterator
-         *                                         API.
-         */
-        @Override
-        public E next() {
-            checkForComodification();
-            
-            if (!hasNext()) {
-                throw new NoSuchElementException();
-            }
-            
-            lastReturned = nextToIterate;
-            nextToIterate = nextToIterate.prev;
-            nextIndex--;
-            return lastReturned.item;
-        }
-        
-        /**
-         * Removes the most recently returned element from the list.
-         * 
-         * @throws IllegalStateException if there is no most recent element. 
-         *                               This can happen if there was no 
-         *                               {@link DescendingIterator#next()} 
-         *                               on this iterator, or the previous 
-         *                               operation was
-         *                               {@link DescendingIterator#remove()}.
-         */
-        @Override
-        public void remove() {
-            if (lastReturned == null) {
-                throw new IllegalStateException();
-            }
-            
-            checkForComodification();
-            
-            removeObjectImpl(lastReturned, nextIndex + 1);
-            lastReturned = null;
-            expectedModCount++;
-        }
-        
-        /**
-         * Iterates over all remaining elements in the descendinig iteration 
-         * order.
-         * 
-         * @param action the action to call for each iterated element. 
-         */
-        @Override
-        public void forEachRemaining(Consumer<? super E> action) {
-            Objects.requireNonNull(action);
-            
-            while (modCount == expectedModCount && hasNext()) {
-                action.accept(nextToIterate.item);
-                nextToIterate = nextToIterate.prev;
-                nextIndex--;
-            }
-            
-            checkForComodification();
-        }
-        
-        /**
-         * Makes sure that the expected modification count equals the iterator's
-         * modification count, and throws an exception if that is not the case.
-         * 
-         * @throws ConcurrentModificationException if the modification counts do
-         *                                         not match.
-         */
-        private void checkForComodification() {
             if (modCount != expectedModCount) {
                 throw new ConcurrentModificationException();
             }
